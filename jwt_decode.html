@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Offline JWT Decoder</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      background: #f5f7fa;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+    }
+    .editor {
+      width: 100%;
+      min-height: 60px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      white-space: nowrap;
+      overflow-x: auto;
+    }
+    .editor:focus {
+      outline: none;
+      border-color: #666;
+    }
+    .header-part { color: #1565c0; }
+    .payload-part { color: #2e7d32; }
+    .signature-part { color: #ad1457; }
+
+    .section {
+      margin-bottom: 20px;
+    }
+    .box {
+      padding: 15px;
+      border-radius: 6px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .header {
+      background: #e1f5fe;
+      border: 1px solid #81d4fa;
+    }
+    .payload {
+      background: #f1f8e9;
+      border: 1px solid #aed581;
+    }
+    .signature {
+      background: #fce4ec;
+      border: 1px solid #f48fb1;
+      color: #777;
+    }
+    .label {
+      font-weight: bold;
+      margin-bottom: 5px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>Offline JWT Decoder</h1>
+  <div id="editor" class="editor" contenteditable="true" spellcheck="false"
+       placeholder="Paste your JWT here"></div>
+
+  <div class="section">
+    <span class="label">Header</span>
+    <div id="header" class="box header">–</div>
+  </div>
+  <div class="section">
+    <span class="label">Payload</span>
+    <div id="payload" class="box payload">–</div>
+  </div>
+  <div class="section">
+    <span class="label">Signature</span>
+    <div id="signature" class="box signature">–</div>
+  </div>
+
+  <script>
+    function b64decode(str) {
+      str = str.replace(/-/g, '+').replace(/_/g, '/');
+      try {
+        return decodeURIComponent(atob(str).split('').map(c =>
+          '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join(''));
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function decodeJWT(token) {
+      const parts = token.split('.');
+      if (parts.length !== 3) throw new Error("Invalid JWT");
+      return {
+        header: JSON.parse(b64decode(parts[0])),
+        payload: JSON.parse(b64decode(parts[1])),
+        signature: parts[2]
+      };
+    }
+
+    function highlightJWT(token) {
+      const parts = token.split('.');
+      return parts.map((p, i) => {
+        if (i === 0) return `<span class="header-part">${p}</span>`;
+        if (i === 1) return `<span class="payload-part">${p}</span>`;
+        if (i === 2) return `<span class="signature-part">${p}</span>`;
+        return p;
+      }).join('<span style="color:#000">.</span>');
+    }
+
+    const editor = document.getElementById('editor');
+    const headerBox = document.getElementById('header');
+    const payloadBox = document.getElementById('payload');
+    const signatureBox = document.getElementById('signature');
+
+    editor.addEventListener('input', () => {
+      const rawText = editor.innerText.trim();
+
+      // Highlight input
+      editor.innerHTML = highlightJWT(rawText);
+      placeCaretAtEnd(editor);
+
+      // Decode JWT
+      try {
+        const decoded = decodeJWT(rawText);
+        headerBox.textContent = JSON.stringify(decoded.header, null, 2);
+        payloadBox.textContent = JSON.stringify(decoded.payload, null, 2);
+        signatureBox.textContent = decoded.signature || "–";
+      } catch {
+        headerBox.textContent = "Invalid JWT";
+        payloadBox.textContent = "Invalid JWT";
+        signatureBox.textContent = "Invalid JWT";
+      }
+    });
+
+    // Keep caret at end after re-render
+    function placeCaretAtEnd(el) {
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  </script>
+</body>
+</html>

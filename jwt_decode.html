@@ -61,6 +61,18 @@
       margin-bottom: 5px;
       display: block;
     }
+    .date-badge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 8px;
+      font-size: 12px;
+      background: #e0e7ef;
+      color: #1565c0;
+      border-radius: 12px;
+      vertical-align: middle;
+      font-family: inherit;
+      opacity: 0.85;
+    }
   </style>
 </head>
 <body>
@@ -128,9 +140,32 @@
       // Decode JWT
       try {
         const decoded = decodeJWT(rawText);
-        headerBox.textContent = JSON.stringify(decoded.header, null, 2);
-        payloadBox.textContent = JSON.stringify(decoded.payload, null, 2);
-        signatureBox.textContent = decoded.signature || "–";
+          headerBox.textContent = JSON.stringify(decoded.header, null, 2);
+          // Format payload with human-readable dates for exp, nbf, iat
+          const payload = { ...decoded.payload };
+          ["exp", "nbf", "iat"].forEach(key => {
+            if (typeof payload[key] === "number") {
+              // Convert NumericDate to human-readable string
+              const date = new Date(payload[key] * 1000);
+              payload[key + "_human"] = date.toLocaleString();
+            }
+          });
+          // Custom pretty print: show value and human date next to it, styled
+          function prettyPayloadHTML(obj) {
+            let out = '{<br>';
+            for (const k in obj) {
+              if (["exp", "nbf", "iat"].includes(k) && obj[k + "_human"]) {
+                out += `&nbsp;&nbsp;<span style=\"color:#2e7d32\">\"${k}\"</span>: <span>${obj[k]}</span><span class=\"date-badge\">${obj[k + "_human"]}</span>,<br>`;
+              } else if (!["exp_human", "nbf_human", "iat_human"].includes(k)) {
+                out += `&nbsp;&nbsp;<span style=\"color:#2e7d32\">\"${k}\"</span>: <span>${JSON.stringify(obj[k])}</span>,<br>`;
+              }
+            }
+            out = out.replace(/,<br>$/, '<br>');
+            out += '}';
+            return out;
+          }
+          payloadBox.innerHTML = prettyPayloadHTML(payload);
+          signatureBox.textContent = decoded.signature || "–";
       } catch {
         headerBox.textContent = "Invalid JWT";
         payloadBox.textContent = "Invalid JWT";
@@ -150,3 +185,4 @@
   </script>
 </body>
 </html>
+

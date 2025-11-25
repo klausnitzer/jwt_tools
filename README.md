@@ -14,6 +14,6 @@ Inspired by [jwt.io](https://jwt.io), but designed for local and private use.
 
 1. Clone or download this repository:
    ```bash
-   git clone https://github.com/<your-username>/jwt_tools.git
+   git clone https://github.com/klausnitzer/jwt_tools.git
    ```
 
